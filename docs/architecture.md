@@ -32,8 +32,10 @@ procesa con `awk`.
 10. `install_local_copy` → guarda este script en
     `/usr/local/lib/go-installer/install.sh` (si no hay fuente local, lo baja
     del repositorio; si falla, `go-update` seguirá funcionando por red).
-11. `setup_path` → `/etc/profile.d/go.sh` (solo prefijo `/usr/local`) y bloque
-    con marcadores en `~/.bashrc`, `~/.profile`, `~/.zshrc`.
+11. `setup_path` → `/etc/profile.d/go.sh` (solo prefijo `/usr/local`) y bloque con
+    marcadores en `~/.bashrc`, `~/.profile`, `~/.zshrc`. Cada bloque lleva una
+    guarda `case ":$PATH:" in` para no duplicar rutas cuando varios perfiles se
+    cargan en el mismo shell (p. ej. `/etc/profile` + `~/.profile` en un login).
 
 `--dry-run` realiza pasos de lectura (1–5) y muestra el plan; nunca descarga ni
 escribe. `--uninstall` revierte 6–11 (quita el árbol, binarios, perfiles y los

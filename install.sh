@@ -15,7 +15,7 @@
 #
 set -Eeuo pipefail
 
-readonly SCRIPT_VERSION="1.0.0"
+readonly SCRIPT_VERSION="1.0.1"
 readonly REPO_OWNER="bioodev"
 readonly REPO_NAME="go-installer"
 readonly REPO_BRANCH="main"
@@ -533,9 +533,20 @@ add_user_path_block() {
     skip "PATH ya contiene ${GO_DIR}/bin en $rc"
     return 0
   fi
-  # shellcheck disable=SC2016  # $HOME/$PATH deben expandirse al cargar el perfil
-  printf '\n%s\nexport PATH="%s/bin:$HOME/go/bin:$PATH"\n%s\n' \
-    "$MARK_BEGIN" "$GO_DIR" "$MARK_END" >> "$rc"
+  # shellcheck disable=SC2016  # $PATH/$HOME deben expandirse al cargar el perfil
+  local block
+  block="
+${MARK_BEGIN}
+case \":\$PATH:\" in
+  *\":${GO_DIR}/bin:\"*) ;;
+  *) export PATH=\"${GO_DIR}/bin:\$PATH\" ;;
+esac
+case \":\$PATH:\" in
+  *\":\$HOME/go/bin:\"*) ;;
+  *) export PATH=\"\$HOME/go/bin:\$PATH\" ;;
+esac
+${MARK_END}"
+  printf '%s\n' "$block" >> "$rc"
   ok "PATH añadido en $rc"
 }
 

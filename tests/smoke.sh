@@ -50,7 +50,7 @@ COMMON=(GO_INSTALL_PREFIX="$PREFIX" GO_INSTALLER_TARGET_HOME="$FAKE_HOME")
 
 note "--version"
 out="$(bash "$INSTALLER" --version)"
-check "$out" "go-installer 1.0.0" "--version"
+check "$out" "go-installer 1.0.1" "--version"
 
 note "--help"
 # shellcheck disable=SC2016  # $1 se expande dentro de bash -c
@@ -62,7 +62,7 @@ check $? 0 "--list"
 assert_true "--list muestra versiones" grep -q "go1\." <<< "$out"
 
 note "--check en prefijo vacío (10 = actualización disponible)"
-rc=0; bash "$INSTALLER" --check >/dev/null 2>&1 || rc=$?
+rc=0; env "${COMMON[@]}" bash "$INSTALLER" --check >/dev/null 2>&1 || rc=$?
 check "$rc" 10 "--check sin instalar"
 
 note "--go-version inexistente (debe fallar)"
@@ -85,15 +85,20 @@ if [ "$SKIP_DOWNLOAD" -eq 0 ]; then
   assert_true "existe $PREFIX/bin/go-update" test -x "$PREFIX/bin/go-update"
   assert_true "existe la copia local del instalador" test -r "$PREFIX/lib/go-installer/install.sh"
   check "$(grep -cE "# (>>>|<<<) go-installer" "$FAKE_HOME/.bashrc" 2>/dev/null || true)" 2 ".bashrc con marcadores del bloque"
+  # shellcheck disable=SC2016  # patrón literal con $PATH
+  assert_true ".bashrc con guarda anti-duplicados" grep -q 'case ":$PATH:" in' "$FAKE_HOME/.bashrc"
 
   note "idempotencia (segunda ejecución)"
   out="$(env "${COMMON[@]}" bash "$INSTALLER")"
   assert_true "segunda ejecución no reinstala" grep -q "ya está en la última versión" <<< "$out"
 
   note "go-update --check (usa la copia del instalador vía file://)"
+  # Prefijo vacío: go-update debe detectar que falta la última versión (exit 10).
+  mkdir -p "$SANDBOX/vacio"
   rc=0
-  GO_INSTALLER_RAW_BASE="file://$HERE" "$PREFIX/bin/go-update" --check >/dev/null 2>&1 || rc=$?
-  check "$rc" 10 "go-update --check reporta actualización"
+  GO_INSTALL_PREFIX="$SANDBOX/vacio" GO_INSTALLER_TARGET_HOME="$FAKE_HOME" \
+    GO_INSTALLER_RAW_BASE="file://$HERE" "$PREFIX/bin/go-update" --check >/dev/null 2>&1 || rc=$?
+  check "$rc" 10 "go-update --check detecta actualización"
 
   note "fijar versión más antigua (--go-version)"
   env "${COMMON[@]}" bash "$INSTALLER" --go-version 1.26.3 >/dev/null
